@@ -6,9 +6,9 @@ import { copySync } from "https://deno.land/std/fs/mod.ts";
 import makeloc from "https://deno.land/x/dirname@1.1.2/mod.ts";
 import * as fsPro from "http://deno.land/x/fs_pro@3.7.0/mod.ts";
 
-import { TaskWarrior } from "../taskwarrior/mod.ts";
-import { Task, TaskPriority } from "../taskwarrior/mod.ts";
-import { Opt } from "../taskwarrior/utils.ts";
+import { TaskWarrior } from "../taskwarrior-deno/mod.ts";
+import { Task, TaskPriority } from "../taskwarrior-deno/mod.ts";
+import { Opt } from "../taskwarrior-deno/utils.ts";
 
 /**
  * Rc File to create in the test directory
@@ -124,40 +124,130 @@ Deno.test("fetch tasks", async () => {
   wrapper.teardown();
 });
 
+
+// TODO Fix this when you have a working search function
+Deno.test({name: "search tasks", ignore: true, async fn() {
+  const dir = fsPro.Dir.tmpDir();
+  console.debug(`Operating in dir: `, dir.path);
+  const wrapper = new TestWrapper(dir.path, RcConfig.Empty);
+
+  await wrapper.tw.createTask(
+    new Task(
+      Object({
+        description: "mydescription1",
+        tags: ["kalimera", "kalinuxta", "kalispera"],
+      })
+    )
+  );
+  await wrapper.tw.createTask(
+    new Task(
+      Object({
+        description: "mydescription2",
+        tags: ["kalimera", "kalinuxta", "kalispera"],
+      })
+    )
+  );
+  await wrapper.tw.createTask(
+    new Task(
+      Object({
+        description: "mydescription3",
+        tags: ["kalinuxta", "kalispera"],
+      })
+    )
+  );
+  await wrapper.tw.createTask(
+    new Task(
+      Object({
+        description: "somerandomname",
+        tags: ["kalinuxta", "kalispera"],
+      })
+    )
+  );
+
+  const results1 = await wrapper.tw.searchFor(
+    new Task(
+      Object({
+        description: "description",
+      })
+    )
+  );
+  assertEquals(results1.length, 3);
+
+  const results2 = await wrapper.tw.searchFor(
+    new Task(
+      Object({
+        description: "description",
+        tags: ["kalimera"],
+      })
+    )
+  );
+  assertEquals(results2.length, 2);
+}});
+
 Deno.test("create task", async () => {
   const dir = fsPro.Dir.tmpDir();
-  console.log(`dir: `, dir.path);
   const wrapper = new TestWrapper(dir.path, RcConfig.Empty);
 
   const createAndAssertFn = async (desc: string) => {
     const tasksBefore = await wrapper.tw.getPendingTasks();
-    const newTask = await wrapper.tw.createTask(
-      new Task(Object({ description: desc }))
+    // TODO Make the dependencies upon the dates explicit
+    const newTaskBeforeAdd = new Task(
+      Object({
+        description: desc,
+        entry: new Date(1901000005000), // ~2191
+        start: new Date(1901000015000),
+        due: new Date(1901000025000),
+        until: new Date(1901000020000),
+        tags: ["kalimera", "kalinuxta", "kalispera"],
+        // TODO Add the rest of the now untested fields (annotations, urgency,...)
+        //      + Add it to the loop below
+      })
     );
+    const newTaskAfterAdd = await wrapper.tw.createTask(newTaskBeforeAdd);
+
+    for (const prop of [
+      "description",
+      "due",
+      "entry",
+      "start",
+      "until",
+      "tags",
+    ]) {
+      assertEquals(newTaskBeforeAdd.props[prop], newTaskAfterAdd.props[prop]);
+    }
+
+    // should have an ID and a UUID
+    assert(
+      newTaskAfterAdd.props.id,
+      `Task should have an ID - task:\n\n${newTaskAfterAdd}`
+    );
+    assert(
+      newTaskAfterAdd.uuid,
+      `Task should have an UUID - task:\n\n${newTaskAfterAdd}`
+    );
+
+    // make sure we've added a single task after the previous
     const tasksAfter = await wrapper.tw.getPendingTasks();
     assertEquals(tasksAfter.length, tasksBefore.length + 1);
 
-    return newTask;
+    return newTaskAfterAdd;
   };
 
   // no tasks at first
   const initTasks = await wrapper.tw.getPendingTasks();
   assertEquals(initTasks.length, 0);
 
-  // create a task, verify that it's there
-  const desc = "description1";
-  await createAndAssertFn(desc);
-  // Also check its contents
-  const latestTask = await wrapper.tw.getLatestTask();
-  console.log(`create - latestTask: `, latestTask);
-  // TODO
-
-  // create another
+  // create and verify the contents of a bunch of tasks
+  await createAndAssertFn("description1");
   await createAndAssertFn("description2");
-
-  // and another
   await createAndAssertFn("description3");
 
   wrapper.teardown();
   dir.delete();
 });
+
+// TODO Test update
+// TODO Test delete
+// TODO Test complete
+// TODO Test log
+// TODO Test searchFor

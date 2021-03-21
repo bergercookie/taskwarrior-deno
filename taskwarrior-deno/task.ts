@@ -1,8 +1,8 @@
 import { UUID, Opt } from "./utils.ts";
 import { _ } from "./deps.ts";
 
-// ITask -----------------------------------------------------------------------
-export interface ITask {
+// ATask -----------------------------------------------------------------------
+export abstract class ATask {
   /**
    * UUID of the Task
    * This should be the main *unique* field that identifies a Task object (i.e.,
@@ -12,15 +12,15 @@ export interface ITask {
    * A task may not have been assigned a UUID yet. This is the case with newly
    * created tasks which haven't been passed to the TaskWarrior CLI yet.
    */
-  readonly uuid?: UUID;
-  props: ITaskProperties;
+  abstract readonly uuid?: UUID;
+  abstract props: ATaskProperties;
 
   /**
    * Convert the given task to a format suitable to be given to taskwarrior on
    * the command line
    * @todo unittest this
    */
-  formatForCLI(): string[];
+  abstract formatForCLI(): string[];
 }
 
 // TODO
@@ -40,9 +40,9 @@ export enum TaskStatus {
   recurring,
 }
 
-// ITaskProperties -------------------------------------------------------------
+// ATaskProperties -------------------------------------------------------------
 
-interface ITaskProperties {
+interface ATaskProperties {
   annotations?: TaskAnnotation[];
   depends?: UUID[];
   description?: string;
@@ -75,40 +75,14 @@ interface ITaskProperties {
 // deno-lint-ignore no-explicit-any
 type FieldConverterFunction = (val: any) => string;
 
-export class Task implements ITask {
+export class Task extends ATask {
   private _uuid?: UUID;
-  private _props: ITaskProperties;
+  private _props: ATaskProperties;
 
-  constructor(props: ITaskProperties) {
-    this._props = Task.toTaskProperties(props);
-  }
-
-  private static toTaskProperties(
-    obj: Record<string, unknown>
-  ): ITaskProperties {
-    // dates
-    const dateFields = [
-      "due",
-      "end",
-      "entry",
-      "modified",
-      "scheduled",
-      "start",
-      "until",
-      "wait",
-    ];
-
-    for (const field of dateFields) {
-      if (field in obj) {
-        obj[field] = Task.parseISO8601Date(<string>Object(obj)[field]);
-      }
-    }
-
-    // UUIDs
-    // TaskPriority
-    // TaskStatus
-
-    return Object(obj);
+  constructor(props: ATaskProperties) {
+    super();
+    // TODO assert types of ATaskProperties even during runtime?
+    this._props = props;
   }
 
   private static parseISO8601Date(dateStr: string): Date {
@@ -127,13 +101,9 @@ export class Task implements ITask {
    * formats it accordingly when called.
    */
   private static getConvertersMap(): Map<string, FieldConverterFunction> {
-    // TODO Handle it as an actual date
     const dateC = (key: string, val: Date) => {
-      return `${key}:${val
-        .toISOString()
-        .replace(/-/g, "")
-        .replace(/:/g, "")
-        .replace(".", "")}`;
+      const s = val.toISOString();
+      return `${key}:${s.substr(0, s.lastIndexOf("."))}Z`;
     };
 
     const m = new Map<string, FieldConverterFunction>([
@@ -231,12 +201,12 @@ export class Task implements ITask {
     return converter(val);
   }
 
-  get props(): ITaskProperties {
+  get props(): ATaskProperties {
     return this._props;
   }
 
-  set props(val: ITaskProperties) {
-    this._props = Task.toTaskProperties(val);
+  set props(val: ATaskProperties) {
+    this._props = val;
   }
 
   get annotations(): TaskAnnotation[] {
@@ -266,15 +236,14 @@ export class Task implements ITask {
     // assemble CLI
     //
 
-    // specify only one of ID, UUID. This ID may still be empty, e.g., if this
-    // task hasn't been inserted to taskwarrior yet.
+    // specify only UUID (not both UUID and ID). UUID may still be empty if task hasn't been
+    // inserted yet
     delete cpy.props["id"];
 
     // cannot pass these to the CLI
     delete cpy.props["imask"];
     delete cpy.props["mask"];
     delete cpy.props["urgency"];
-
 
     // TODO A little bit of functional prog wouldn't hurt.
     const cliArgs: string[] = [];
@@ -286,5 +255,39 @@ export class Task implements ITask {
     }
 
     return cliArgs;
+  }
+  // deno-lint-ignore no-explicit-any
+  public static fromJSON(json: Record<string, any>): ATask {
+    // let this_ = new Task(Object({}));
+    // return this_;
+
+    for (const field of [
+      "due",
+      "end",
+      "entry",
+      "modified",
+      "scheduled",
+      "start",
+      "until",
+      "wait",
+    ]) {
+      if (field in json) {
+        json[field] = Task.parseISO8601Date(<string>Object(json)[field]);
+      }
+    }
+
+    // deno-lint-ignore no-explicit-any
+    const uuid = (<any>json)["uuid"];
+    // deno-lint-ignore no-explicit-any
+    delete (<any>json)["uuid"];
+
+    // create tasks
+    const t = new Task(Object(json));
+    t.uuid = uuid;
+
+    // TaskPriority
+    // TaskStatus
+
+    return t;
   }
 }

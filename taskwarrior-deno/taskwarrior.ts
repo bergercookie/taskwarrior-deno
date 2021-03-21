@@ -1,20 +1,24 @@
-import { ITask, Task } from "./task.ts";
+import { ATask, Task } from "./task.ts";
 import { UUID, Opt } from "./utils.ts";
-import { existsSync } from "./deps.ts";
+import { existsSync, _ } from "./deps.ts";
 
-// ITaskWarrior ----------------------------------------------------------------
-abstract class ITaskWarrior {
+// ATaskWarrior ----------------------------------------------------------------
+abstract class ATaskWarrior {
   /** Path to the configuration file */
   abstract readonly config: Opt<string>;
-  abstract createTask(task: ITask): Promise<ITask>;
+  abstract createTask(task: ATask): Promise<ATask>;
   /**
    * Update the given task based on the properties of the new object
    */
-  abstract updateTask(task: ITask): ITask;
+  abstract updateTask(task: ATask): ATask;
   /**
    * Mark the task with the given UUID as completled
    */
   abstract completeTask(uuid: UUID): void;
+  /**
+   * Log a completed task
+   */
+  abstract logTask(task: ATask): void;
   /**
    * Delete the task with the given UUID
    */
@@ -23,23 +27,23 @@ abstract class ITaskWarrior {
    * Given an incomplete Task object, e.g., one that only contains the title,
    * look for and retrieve Task objects that match.
    */
-  abstract searchFor(task: ITask): ITask[];
+  abstract searchFor(task: ATask): Promise<ATask[]>;
   /**
    * Retrieve all the pending tasks
    */
-  abstract getPendingTasks(): Promise<ITask[]>;
+  abstract getPendingTasks(): Promise<ATask[]>;
   /**
    * Retrieve all the completed tasks
    */
-  abstract getCompletedTasks(): Promise<Array<ITask>>;
+  abstract getCompletedTasks(): Promise<Array<ATask>>;
   /**
    * Fetch the most recently added task
    */
-  abstract getLatestTask(): Promise<ITask>;
+  abstract getLatestTask(): Promise<ATask>;
   /**
    * Get all tasks regardless of their status
    */
-  async getAllTasks(): Promise<ITask[]> {
+  async getAllTasks(): Promise<ATask[]> {
     return [
       ...(await this.getPendingTasks()),
       ...(await this.getCompletedTasks()),
@@ -55,7 +59,7 @@ abstract class ITaskWarrior {
 // }
 
 // TaskWarrior -----------------------------------------------------------------
-export default class TaskWarrior extends ITaskWarrior {
+export default class TaskWarrior extends ATaskWarrior {
   private readonly _config: Opt<string>;
   private readonly configOverrides = [
     "rc.json.array=TRUE",
@@ -111,7 +115,9 @@ export default class TaskWarrior extends ITaskWarrior {
       const stdout = new TextDecoder().decode(stdout_);
       const stderr = new TextDecoder().decode(stderr_);
       throw new Error(
-        `*** Command execution [${cmdArgs.join(" ")}] failed ***\n\nStandard Output -----\n\n${stdout}\n\nStandard Error -----\n\n${stderr}`
+        `*** Command execution [${cmdArgs.join(
+          " "
+        )}] failed ***\n\nStandard Output -----\n\n${stdout}\n\nStandard Error -----\n\n${stderr}`
       );
     } else {
       const stdout = new TextDecoder().decode(stdout_);
@@ -119,9 +125,95 @@ export default class TaskWarrior extends ITaskWarrior {
     }
   }
 
-  async getLatestTask(): Promise<ITask> {
+  async getLatestTask(): Promise<ATask> {
     const stdout = await this.execute(["export", "+LATEST"]);
-    const tasks = this.parseJsonTasksList(stdout);
+    return this.parseJsonSingleTask(stdout);
+  }
+
+  private static checkTaskNotCreated(task: ATask) {
+    if (task.uuid) {
+      throw Error(
+        `Task that is to be created already contains a UUID - ${task}`
+      );
+    }
+  }
+
+  private static checkTaskCreated(task: ATask) {
+    if (!task.uuid) {
+      throw Error(
+        `Task that that has already been created must contain a UUID - ${task}`
+      );
+    }
+  }
+
+  async createTask(task: ATask): Promise<ATask> {
+    TaskWarrior.checkTaskNotCreated(task);
+
+    // TODO Add the annotations manually
+    if (!_.isEmpty(task.props.annotations)) {
+    }
+    await this.execute(["add", ...task.formatForCLI()]);
+    return await this.getLatestTask();
+  }
+
+  updateTask(task: ATask): ATask {
+    // TODO
+    return new Task(Object({ description: "kalimera" }));
+  }
+  async logTask(task: ATask) {
+    TaskWarrior.checkTaskNotCreated(task);
+    await this.execute(["log", ...task.formatForCLI()]);
+    // TODO Don't know how to retrieve the latest logged task
+    //      OR how to check that this was successful
+  }
+  async completeTask(uuid: UUID) {
+    // TODO Test it
+    await this.execute(["done", uuid]);
+  }
+  async deleteTask(uuid: UUID) {
+    // TODO Test it
+    await this.execute(["delete", uuid]);
+  }
+  async searchFor(task: ATask): Promise<ATask[]> {
+    // TODO Implement this - first load all the tasks, then search based on
+    // language syntax
+    //
+    // Searching via a CLI command doesn't seem to work for some bizzare reason
+    const stdout = await this.execute(["export", ...task.formatForCLI()]);
+    return this.parseJsonTasksList(stdout);
+  }
+  async getPendingTasks(): Promise<ATask[]> {
+    const stdout = await this.execute(["export", "status=pending"]);
+    return this.parseJsonTasksList(stdout);
+  }
+  async getCompletedTasks(): Promise<Array<ATask>> {
+    const stdout = await this.execute(["export", "status=completed"]);
+    return this.parseJsonTasksList(stdout);
+  }
+
+  /**
+   * Parse the output of a TaskWarrior export command. The latter dumps its data
+   * in a JSON array
+   *
+   * @todo Make a unittest for this
+   */
+  parseJsonTasksList(str: string): ATask[] {
+    // deno-lint-ignore ban-types
+    const json: Array<object> = JSON.parse(str);
+
+    //
+    // JSON Objects --> Tasks
+    //
+    const tasks = json.map((json_el) => {
+      // deno-lint-ignore no-explicit-any
+      return Task.fromJSON(<any>json_el);
+    });
+
+    return tasks;
+  }
+
+  parseJsonSingleTask(str: string): ATask {
+    const tasks = this.parseJsonTasksList(str);
     if (tasks.length !== 1) {
       throw Error(
         `Programmatic Error: Asked for the latest task but got more than 1. Tasks list:\n${tasks}`
@@ -131,85 +223,5 @@ export default class TaskWarrior extends ITaskWarrior {
     return tasks[0];
   }
 
-  async createTask(task: ITask): Promise<ITask> {
-    if (task.uuid) {
-      throw Error(
-        `Task that is to be created already contains a UUID - ${task}`
-      );
-    }
-
-    const stdout = await this.execute(["add", ...task.formatForCLI()]);
-    console.log("[taskwarrior.ts:122] DEBUGGING STRING ==> 4");
-    console.log(`stdout: `, stdout);
-
-    // task +LATEST uuids
-    // TODO
-
-    // TODO Add the annotations manually
-
-    // Return the created task
-    // TODO
-    return Object({ description: "TODO" });
-  }
-  updateTask(task: ITask): ITask {
-    // TODO
-    return new Task(Object({ description: "kalimera" }));
-  }
-  async completeTask(uuid: UUID) {
-    // TODO
-    await this.execute(["complete", uuid]);
-  }
-  async deleteTask(uuid: UUID) {
-    // TODO
-    await this.execute(["delete", uuid]);
-  }
-  searchFor(task: ITask): ITask[] {
-    // TODO
-    return [];
-  }
-  async getPendingTasks(): Promise<ITask[]> {
-    const stdout = await this.execute(["export", "status=pending"]);
-    return this.parseJsonTasksList(stdout);
-  }
-  async getCompletedTasks(): Promise<Array<ITask>> {
-    const stdout = await this.execute(["export", "status=completed"]);
-    return this.parseJsonTasksList(stdout);
-  }
-
-  jsonElementToTask(json: Record<string, unknown>): ITask {
-    // deno-lint-ignore no-explicit-any
-    const uuid = (<any>json)["uuid"];
-    // deno-lint-ignore no-explicit-any
-    delete (<any>json)["uuid"];
-
-    // initialise a new task
-    const t = new Task(Object(json));
-    t.uuid = uuid;
-
-    return t;
-  }
-
-  /**
-   * Parse the output of a TaskWarrior export command. The latter dumps its data
-   * in a JSON array
-   *
-   * @todo Make a unittest for this
-   */
-  parseJsonTasksList(str: string): ITask[] {
-    // deno-lint-ignore ban-types
-    const json: Array<object> = JSON.parse(str);
-
-    //
-    // JSON Objects --> Tasks
-    //
-    const tasks = json.map((json_el) => {
-      // deno-lint-ignore no-explicit-any
-      return this.jsonElementToTask(<any>json_el);
-    });
-
-    return tasks;
-  }
-  sync(): void {
-    // TODO
-  }
+  sync(): void {}
 }
