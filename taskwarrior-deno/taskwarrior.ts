@@ -29,23 +29,43 @@ abstract class ATaskWarrior {
    */
   abstract searchFor(task: ATask): Promise<ATask[]>;
   /**
-   * Retrieve all the pending tasks
+   * Retrieve all the active tasks
    */
-  abstract getPendingTasks(): Promise<ATask[]>;
+  abstract getActiveTasks(): Promise<ATask[]>;
   /**
    * Retrieve all the completed tasks
    */
   abstract getCompletedTasks(): Promise<Array<ATask>>;
   /**
+   * Get multiple tasks by their UUIDs
+   */
+  abstract getMultipleTasks(uuid: UUID[]): Promise<ATask[]>;
+  /**
    * Fetch the most recently added task
    */
   abstract getLatestTask(): Promise<ATask>;
+  /**
+   * Fetch the tasks that currently block other tasks
+   */
+  abstract getBlockingTasks(): Promise<ATask[]>;
+  /**
+   * Fetch the tasks that are currently blocked by other tasks
+   */
+  abstract getBlockedTasks(): Promise<ATask[]>;
+  /**
+   * Fetch the most urgent actionable tasks
+   */
+  abstract getReadyTasks(): Promise<ATask[]>;
+  /**
+   * Fetch currently unblocked tasks
+   */
+  abstract getUnblockedTasks(): Promise<ATask[]>;
   /**
    * Get all tasks regardless of their status
    */
   async getAllTasks(): Promise<ATask[]> {
     return [
-      ...(await this.getPendingTasks()),
+      ...(await this.getActiveTasks()),
       ...(await this.getCompletedTasks()),
     ];
   }
@@ -59,7 +79,7 @@ abstract class ATaskWarrior {
 // }
 
 // TaskWarrior -----------------------------------------------------------------
-export default class TaskWarrior extends ATaskWarrior {
+export class TaskWarrior extends ATaskWarrior {
   private readonly _config: Opt<string>;
   private readonly configOverrides = [
     "rc.json.array=TRUE",
@@ -68,7 +88,7 @@ export default class TaskWarrior extends ATaskWarrior {
     "rc.dependency.confirmation=no",
     "rc.recurrence.confirmation=no",
   ];
-  constructor(config: Opt<string>) {
+  constructor(config: Opt<string> = undefined) {
     super();
 
     // configuration file
@@ -123,6 +143,18 @@ export default class TaskWarrior extends ATaskWarrior {
       const stdout = new TextDecoder().decode(stdout_);
       return stdout;
     }
+  }
+
+  // TODO Test this
+  async getTaskByUUID(uuid: UUID): Promise<ATask> {
+    const stdout = await this.execute(["export", uuid]);
+    return this.parseJsonSingleTask(stdout);
+  }
+
+  // TODO Test this
+  async getMultipleTasks(uuids: UUID[]): Promise<ATask[]> {
+    const stdout = await this.execute(["export", ...uuids]);
+    return this.parseJsonTasksList(stdout);
   }
 
   async getLatestTask(): Promise<ATask> {
@@ -182,15 +214,30 @@ export default class TaskWarrior extends ATaskWarrior {
     const stdout = await this.execute(["export", ...task.formatForCLI()]);
     return this.parseJsonTasksList(stdout);
   }
-  async getPendingTasks(): Promise<ATask[]> {
-    const stdout = await this.execute(["export", "status=pending"]);
+  async getActiveTasks(): Promise<ATask[]> {
+    const stdout = await this.execute(["export"]);
     return this.parseJsonTasksList(stdout);
   }
-  async getCompletedTasks(): Promise<Array<ATask>> {
-    const stdout = await this.execute(["export", "status=completed"]);
+  async getCompletedTasks(): Promise<ATask[]> {
+    const stdout = await this.execute(["export", "+COMPLETED"]);
     return this.parseJsonTasksList(stdout);
   }
-
+  async getBlockingTasks(): Promise<ATask[]> {
+    const stdout = await this.execute(["export", "+BLOCKING"]);
+    return this.parseJsonTasksList(stdout);
+  }
+  async getBlockedTasks(): Promise<ATask[]> {
+    const stdout = await this.execute(["export", "+BLOCKED"]);
+    return this.parseJsonTasksList(stdout);
+  }
+  async getReadyTasks(): Promise<ATask[]> {
+    const stdout = await this.execute(["export", "+READY"]);
+    return this.parseJsonTasksList(stdout);
+  }
+  async getUnblockedTasks(): Promise<ATask[]> {
+    const stdout = await this.execute(["export", "+UNBLOCKED"]);
+    return this.parseJsonTasksList(stdout);
+  }
   /**
    * Parse the output of a TaskWarrior export command. The latter dumps its data
    * in a JSON array
@@ -211,7 +258,6 @@ export default class TaskWarrior extends ATaskWarrior {
 
     return tasks;
   }
-
   parseJsonSingleTask(str: string): ATask {
     const tasks = this.parseJsonTasksList(str);
     if (tasks.length !== 1) {
@@ -223,5 +269,7 @@ export default class TaskWarrior extends ATaskWarrior {
     return tasks[0];
   }
 
-  sync(): void {}
+  sync(): void {
+    throw new Error("Not implemented yet.");
+  }
 }

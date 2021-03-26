@@ -33,7 +33,7 @@ export enum TaskPriority {
 }
 
 export enum TaskStatus {
-  pending,
+  active,
   completed,
   deleted,
   waiting,
@@ -193,7 +193,7 @@ export class Task extends ATask {
   private formatFieldToCLI(key: string, val: any): Opt<string> {
     const catchall = (key: string) => {
       console.warn(
-        `Don't know how to format ${key} field for the to the command line.`
+        `Don't know how to format the ${key} field to the command line.`
       );
       return undefined;
     };
@@ -248,19 +248,17 @@ export class Task extends ATask {
     // TODO A little bit of functional prog wouldn't hurt.
     const cliArgs: string[] = [];
     for (const [key, val] of Object.entries(cpy.props)) {
-      const cur = `${this.formatFieldToCLI(key, val)}`;
+      const cur = this.formatFieldToCLI(key, val);
       if (cur) {
         cliArgs.push(cur);
       }
+      console.log(`cliArgs: `, cliArgs);
     }
 
     return cliArgs;
   }
   // deno-lint-ignore no-explicit-any
   public static fromJSON(json: Record<string, any>): ATask {
-    // let this_ = new Task(Object({}));
-    // return this_;
-
     for (const field of [
       "due",
       "end",

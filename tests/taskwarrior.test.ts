@@ -189,7 +189,7 @@ Deno.test("create task", async () => {
   const wrapper = new TestWrapper(dir.path, RcConfig.Empty);
 
   const createAndAssertFn = async (desc: string) => {
-    const tasksBefore = await wrapper.tw.getPendingTasks();
+    const tasksBefore = await wrapper.tw.getActiveTasks();
     // TODO Make the dependencies upon the dates explicit
     const newTaskBeforeAdd = new Task(
       Object({
@@ -227,14 +227,14 @@ Deno.test("create task", async () => {
     );
 
     // make sure we've added a single task after the previous
-    const tasksAfter = await wrapper.tw.getPendingTasks();
+    const tasksAfter = await wrapper.tw.getActiveTasks();
     assertEquals(tasksAfter.length, tasksBefore.length + 1);
 
     return newTaskAfterAdd;
   };
 
   // no tasks at first
-  const initTasks = await wrapper.tw.getPendingTasks();
+  const initTasks = await wrapper.tw.getActiveTasks();
   assertEquals(initTasks.length, 0);
 
   // create and verify the contents of a bunch of tasks
