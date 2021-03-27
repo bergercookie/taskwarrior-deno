@@ -1,14 +1,14 @@
 import {
   assertEquals,
   assert,
-} from "https://deno.land/std@0.90.0/testing/asserts.ts";
-import { copySync } from "https://deno.land/std/fs/mod.ts";
+} from "deno-assert";
+import { copySync } from "deno-fs";
 import makeloc from "https://deno.land/x/dirname@1.1.2/mod.ts";
 import * as fsPro from "http://deno.land/x/fs_pro@3.7.0/mod.ts";
 
-import { TaskWarrior } from "../taskwarrior-deno/mod.ts";
-import { Task, TaskPriority } from "../taskwarrior-deno/mod.ts";
-import { Opt } from "../taskwarrior-deno/utils.ts";
+import { TaskWarrior } from "../lib/mod.ts";
+import { Task, TaskPriority } from "../lib/mod.ts";
+import { Opt } from "../lib/utils.ts";
 
 /**
  * Rc File to create in the test directory
@@ -90,7 +90,7 @@ Deno.test("fetch tasks", async () => {
   const wrapper = new TestWrapper();
 
   // check length
-  const pendingTasks = await wrapper.tw.getPendingTasks();
+  const pendingTasks = await wrapper.tw.getActiveTasks();
   assertEquals(pendingTasks.length, expectedPendingTasks);
 
   const completedTasks = await wrapper.tw.getCompletedTasks();

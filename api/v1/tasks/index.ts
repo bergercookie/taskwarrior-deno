@@ -1,5 +1,5 @@
 import type { APIRequest, ServerResponse } from "aleph/types.ts";
-import { TaskWarrior, UUID } from "../../../../taskwarrior-deno/mod.ts";
+import { TaskWarrior, UUID } from "../../../lib/mod.ts";
 
 // globals ---------------------------------------------------------------------
 
@@ -31,10 +31,11 @@ export default async function handler(req: APIRequest) {
 }
 
 async function getHandler(req: APIRequest) {
-  const filter = req.params.filter ? req.params.filter : "pending";
+  const filter = req.params.filter ? req.params.filter : "active";
 
   // tasks to return
   let ts = undefined;
+  console.log("[index.ts:38] DEBUGGING STRING ==> 10");
 
   if (filter == "active") {
     ts = tw.getActiveTasks();
@@ -52,6 +53,8 @@ async function getHandler(req: APIRequest) {
     ts = tw.getUnblockedTasks();
   } else if (filter == "latest") {
     ts = [await tw.getLatestTask()];
+    console.log("[index.ts:54] DEBUGGING STRING ==> 8");
+    console.log(`ts: `, ts);
   } else if (filter == "some") {
     // a few tasks, by ID
     const uuids = req.params.uuids?.split(",").map(trimSpaces);
