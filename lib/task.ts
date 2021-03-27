@@ -252,7 +252,6 @@ export class Task extends ATask {
       if (cur) {
         cliArgs.push(cur);
       }
-      console.log(`cliArgs: `, cliArgs);
     }
 
     return cliArgs;

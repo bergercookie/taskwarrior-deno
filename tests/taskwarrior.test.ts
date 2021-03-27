@@ -83,15 +83,15 @@ regex=on`;
 }
 
 Deno.test("fetch tasks", async () => {
-  const expectedPendingTasks = 5;
+  const expectedActiveTasks = 5;
   const expectedCompletedTasks = 1;
-  const expectedTotalTasks = expectedPendingTasks + expectedCompletedTasks;
+  const expectedTotalTasks = expectedActiveTasks + expectedCompletedTasks;
 
   const wrapper = new TestWrapper();
 
   // check length
-  const pendingTasks = await wrapper.tw.getActiveTasks();
-  assertEquals(pendingTasks.length, expectedPendingTasks);
+  const activeTasks = await wrapper.tw.getActiveTasks();
+  assertEquals(activeTasks.length, expectedActiveTasks);
 
   const completedTasks = await wrapper.tw.getCompletedTasks();
   assertEquals(completedTasks.length, expectedCompletedTasks);

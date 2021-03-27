@@ -215,7 +215,7 @@ export class TaskWarrior extends ATaskWarrior {
     return this.parseJsonTasksList(stdout);
   }
   async getActiveTasks(): Promise<ATask[]> {
-    const stdout = await this.execute(["export"]);
+    const stdout = await this.execute(["export", "+PENDING"]);
     return this.parseJsonTasksList(stdout);
   }
   async getCompletedTasks(): Promise<ATask[]> {
