@@ -1,9 +1,13 @@
 import { ATask, Task } from "./task.ts";
 import { UUID, Opt } from "./utils.ts";
-import { existsSync, _ } from "./deps.ts";
+import { existsSync } from "deno-fs";
+
+import "lodash";
+// deno-lint-ignore no-explicit-any
+const _ = (self as any)._;
 
 // ATaskWarrior ----------------------------------------------------------------
-abstract class ATaskWarrior {
+export abstract class ATaskWarrior {
   /** Path to the configuration file */
   abstract readonly config: Opt<string>;
   abstract createTask(task: ATask): Promise<ATask>;
@@ -79,7 +83,7 @@ abstract class ATaskWarrior {
 // }
 
 // TaskWarrior -----------------------------------------------------------------
-export class TaskWarrior extends ATaskWarrior {
+class TaskWarrior extends ATaskWarrior {
   private readonly _config: Opt<string>;
   private readonly configOverrides = [
     "rc.json.array=TRUE",
@@ -272,4 +276,8 @@ export class TaskWarrior extends ATaskWarrior {
   sync(): void {
     throw new Error("Not implemented yet.");
   }
+}
+
+export function getTaskWarrior(): ATaskWarrior {
+  return new TaskWarrior();
 }

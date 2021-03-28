@@ -1,41 +1,36 @@
-import { useDeno } from 'aleph/react.ts'
-import React from 'react'
-import Logo from '../components/logo.tsx'
-import useCounter from '../lib/useCounter.ts'
+import { useDeno } from "aleph/react.ts";
+import React, { Component } from "react";
 
-export default function Home() {
-  const [count, isSyncing, increase, decrease] = useCounter()
-  const version = useDeno(() => Deno.version.deno)
+export default class Home extends Component {
+  constructor() {
+    super();
+    this.state = { tasks: [] };
+  }
 
-  return (
-    <div className="page">
-      <head>
-        <title>Hello World - Aleph.js</title>
-        <link rel="stylesheet" href="../style/index.css" />
-      </head>
-      <p className="logo"><Logo /></p>
-      <h1>Welcome to use <strong>Aleph.js</strong>!</h1>
-      <p className="links">
-        <a href="https://alephjs.org" target="_blank">Website</a>
-        <span></span>
-        <a href="https://alephjs.org/docs/get-started" target="_blank">Get Started</a>
-        <span></span>
-        <a href="https://alephjs.org/docs" target="_blank">Docs</a>
-        <span></span>
-        <a href="https://github.com/alephjs/aleph.js" target="_blank">Github</a>
-      </p>
-      <div className="counter">
-        <span>Counter:</span>
-        {isSyncing && (
-          <em>...</em>
-        )}
-        {!isSyncing && (
-          <strong>{count}</strong>
-        )}
-        <button onClick={decrease}>-</button>
-        <button onClick={increase}>+</button>
-      </div>
-      <p className="copyinfo">Built by Aleph.js in Deno {version}</p>
-    </div>
-  )
+  // componentDidMount() {
+  //   fetch("/api/v1/tasks").then((tasks) => {
+  //     this.setState({ tasks });
+  //   });
+  // }
+
+  // render() {
+  //   return (
+  //     <div>
+  //       <div className="page">
+  //         <head>
+  //           <title>TaskWarrior</title>
+  //         </head>
+  //         <h1>All tasks</h1>
+  //         {this.state.tasks.map((t) => (
+  //           <div className="task">{t.props.description}</div>
+  //         ))}
+  //       </div>
+  //     </div>
+  //   );
+  // }
+  render() {
+    return (
+      <h1>Kalimera</h1>
+    )
+  }
 }

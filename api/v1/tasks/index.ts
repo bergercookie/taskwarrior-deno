@@ -1,10 +1,10 @@
-import type { APIRequest, ServerResponse } from "aleph/types.ts";
-import { TaskWarrior, UUID } from "../../../lib/mod.ts";
+import type { APIRequest } from "aleph/types.ts";
+import { getTaskWarrior, UUID } from "../../../lib/mod.ts";
 
 // globals ---------------------------------------------------------------------
 
 // const store = globalThis as any
-const tw = new TaskWarrior();
+const tw = getTaskWarrior();
 
 // helpers ---------------------------------------------------------------------
 
@@ -35,7 +35,6 @@ async function getHandler(req: APIRequest) {
 
   // tasks to return
   let ts = undefined;
-  console.log("[index.ts:38] DEBUGGING STRING ==> 10");
 
   if (filter == "active") {
     ts = tw.getActiveTasks();
@@ -53,8 +52,6 @@ async function getHandler(req: APIRequest) {
     ts = tw.getUnblockedTasks();
   } else if (filter == "latest") {
     ts = [await tw.getLatestTask()];
-    console.log("[index.ts:54] DEBUGGING STRING ==> 8");
-    console.log(`ts: `, ts);
   } else if (filter == "some") {
     // a few tasks, by ID
     const uuids = req.params.uuids?.split(",").map(trimSpaces);
@@ -76,8 +73,8 @@ async function getHandler(req: APIRequest) {
   // no pagination, just return everything
   const maxPerPage = 10;
   const ts_ = await ts;
-  console.log(`ts_: `, ts_);
   if (ts_.length <= maxPerPage || !("page" in req.params)) {
+    console.log(`ts_: `, ts_);
     return ts_;
   }
 

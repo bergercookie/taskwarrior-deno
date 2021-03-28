@@ -1,0 +1,1 @@
+autocmd! BufRead,BufNewFile *.ts,*.tsx :CocCommand deno.cache

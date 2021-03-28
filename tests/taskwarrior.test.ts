@@ -1,7 +1,4 @@
-import {
-  assertEquals,
-  assert,
-} from "deno-assert";
+import { assertEquals, assert } from "deno-assert";
 import { copySync } from "deno-fs";
 import makeloc from "https://deno.land/x/dirname@1.1.2/mod.ts";
 import * as fsPro from "http://deno.land/x/fs_pro@3.7.0/mod.ts";
@@ -124,65 +121,68 @@ Deno.test("fetch tasks", async () => {
   wrapper.teardown();
 });
 
-
 // TODO Fix this when you have a working search function
-Deno.test({name: "search tasks", ignore: true, async fn() {
-  const dir = fsPro.Dir.tmpDir();
-  console.debug(`Operating in dir: `, dir.path);
-  const wrapper = new TestWrapper(dir.path, RcConfig.Empty);
+Deno.test({
+  name: "search tasks",
+  ignore: true,
+  async fn() {
+    const dir = fsPro.Dir.tmpDir();
+    console.debug(`Operating in dir: `, dir.path);
+    const wrapper = new TestWrapper(dir.path, RcConfig.Empty);
 
-  await wrapper.tw.createTask(
-    new Task(
-      Object({
-        description: "mydescription1",
-        tags: ["kalimera", "kalinuxta", "kalispera"],
-      })
-    )
-  );
-  await wrapper.tw.createTask(
-    new Task(
-      Object({
-        description: "mydescription2",
-        tags: ["kalimera", "kalinuxta", "kalispera"],
-      })
-    )
-  );
-  await wrapper.tw.createTask(
-    new Task(
-      Object({
-        description: "mydescription3",
-        tags: ["kalinuxta", "kalispera"],
-      })
-    )
-  );
-  await wrapper.tw.createTask(
-    new Task(
-      Object({
-        description: "somerandomname",
-        tags: ["kalinuxta", "kalispera"],
-      })
-    )
-  );
+    await wrapper.tw.createTask(
+      new Task(
+        Object({
+          description: "mydescription1",
+          tags: ["kalimera", "kalinuxta", "kalispera"],
+        })
+      )
+    );
+    await wrapper.tw.createTask(
+      new Task(
+        Object({
+          description: "mydescription2",
+          tags: ["kalimera", "kalinuxta", "kalispera"],
+        })
+      )
+    );
+    await wrapper.tw.createTask(
+      new Task(
+        Object({
+          description: "mydescription3",
+          tags: ["kalinuxta", "kalispera"],
+        })
+      )
+    );
+    await wrapper.tw.createTask(
+      new Task(
+        Object({
+          description: "somerandomname",
+          tags: ["kalinuxta", "kalispera"],
+        })
+      )
+    );
 
-  const results1 = await wrapper.tw.searchFor(
-    new Task(
-      Object({
-        description: "description",
-      })
-    )
-  );
-  assertEquals(results1.length, 3);
+    const results1 = await wrapper.tw.searchFor(
+      new Task(
+        Object({
+          description: "description",
+        })
+      )
+    );
+    assertEquals(results1.length, 3);
 
-  const results2 = await wrapper.tw.searchFor(
-    new Task(
-      Object({
-        description: "description",
-        tags: ["kalimera"],
-      })
-    )
-  );
-  assertEquals(results2.length, 2);
-}});
+    const results2 = await wrapper.tw.searchFor(
+      new Task(
+        Object({
+          description: "description",
+          tags: ["kalimera"],
+        })
+      )
+    );
+    assertEquals(results2.length, 2);
+  },
+});
 
 Deno.test("create task", async () => {
   const dir = fsPro.Dir.tmpDir();

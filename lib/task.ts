@@ -1,5 +1,7 @@
 import { UUID, Opt } from "./utils.ts";
-import { _ } from "./deps.ts";
+
+import "lodash";
+const _ = (self as any)._;
 
 // ATask -----------------------------------------------------------------------
 export abstract class ATask {
